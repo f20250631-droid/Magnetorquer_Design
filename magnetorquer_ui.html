@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magnetorquer Design Bench · 3U ADCS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070b10; --panel:#0d141c; --panel2:#111b25; --line:#1c2a38;
+    --ink:#e8f0f7; --dim:#7d93a8; --dimmer:#4f6274;
+    --accent:#22d3ee; --accent2:#34d399; --warn:#fbbf24; --bad:#fb5f6d;
+    --real:#22d3ee; --ideal:#f472b6; --ceil:#fbbf24;
+    --mono:'IBM Plex Mono',monospace; --disp:'Chakra Petch',sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:
+      radial-gradient(1200px 600px at 80% -10%, #0e2030 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #10231f 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);font-family:var(--mono);font-size:13px;line-height:1.45;
+    padding:22px;min-height:100vh}
+  h1{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:.06em;
+    margin:0 0 2px;color:var(--ink)}
+  h1 .sub{color:var(--accent)}
+  .tagline{color:var(--dim);font-size:12px;margin-bottom:18px;letter-spacing:.02em}
+  .tagline b{color:var(--accent2);font-weight:600}
+  .wrap{display:grid;grid-template-columns:340px 1fr 360px;gap:16px;align-items:start}
+  @media(max-width:1200px){.wrap{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel) 0%,var(--panel2) 100%);
+    border:1px solid var(--line);border-radius:12px;padding:16px 16px 18px}
+  .card h2{font-family:var(--disp);font-weight:600;font-size:12px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--dim);margin:0 0 14px;
+    border-bottom:1px dashed var(--line);padding-bottom:8px}
+  label.ctrl{display:block;margin:0 0 13px}
+  .ctrl .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+  .ctrl .nm{color:var(--dim);font-size:11px;letter-spacing:.04em;text-transform:uppercase}
+  .ctrl .val{font-family:var(--disp);font-weight:600;color:var(--accent);font-size:14px}
+  input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:4px;
+    background:var(--line);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;
+    border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid #06222a;
+    box-shadow:0 0 0 3px rgba(34,211,238,.15)}
+  select{width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+    border-radius:7px;padding:8px 9px;font-family:var(--mono);font-size:12px;cursor:pointer}
+  .seg{display:flex;gap:6px;margin-bottom:13px}
+  .seg button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--dim);
+    padding:7px 4px;border-radius:7px;font-family:var(--mono);font-size:11px;cursor:pointer;
+    letter-spacing:.03em;transition:.12s}
+  .seg button.on{background:rgba(34,211,238,.14);border-color:var(--accent);color:var(--accent)}
+
+  /* telemetry */
+  .tel{font-size:12.5px}
+  .tgrp{margin-bottom:12px}
+  .tgrp .ghd{color:var(--dimmer);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+    margin:0 0 6px;border-bottom:1px solid var(--line);padding-bottom:3px}
+  .t{display:flex;justify-content:space-between;padding:2px 0}
+  .t .k{color:var(--dim)}
+  .t .v{font-weight:500}
+  .v.good{color:var(--accent2)} .v.warn{color:var(--warn)} .v.bad{color:var(--bad)}
+  .v.hi{color:var(--accent)}
+  .chk{display:flex;justify-content:space-between;padding:2.5px 0;font-size:12px}
+  .chk .s{font-weight:600}
+  .verdict{margin-top:10px;text-align:center;font-family:var(--disp);font-weight:700;
+    letter-spacing:.16em;font-size:16px;padding:9px;border-radius:8px}
+  .verdict.pass{background:rgba(52,211,153,.12);color:var(--accent2);border:1px solid #1c5a45}
+  .verdict.fail{background:rgba(251,95,109,.10);color:var(--bad);border:1px solid #5a2530}
+
+  /* saturation / gauge bar */
+  .bar{height:9px;border-radius:5px;background:var(--line);overflow:hidden;margin:5px 0 2px}
+  .bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--warn),var(--bad))}
+  .barlab{display:flex;justify-content:space-between;font-size:10px;color:var(--dimmer)}
+
+  canvas{width:100%;display:block;background:var(--panel2);border:1px solid var(--line);
+    border-radius:9px;margin-bottom:14px}
+  .chtitle{font-size:11px;color:var(--dim);letter-spacing:.05em;margin:0 0 5px}
+  .chtitle b{color:var(--ink);font-weight:600}
+  .legend{display:flex;gap:16px;font-size:11px;color:var(--dim);margin:-8px 0 10px 2px}
+  .legend i{display:inline-block;width:11px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .note{font-size:11px;color:var(--dimmer);line-height:1.5;margin-top:4px;
+    border-left:2px solid var(--line);padding-left:9px}
+</style>
+</head>
+<body>
+  <h1>MAGNETORQUER DESIGN BENCH <span class="sub">// 3U ADCS</span></h1>
+  <div class="tagline">Demag-correct rod physics (Fakhari 2010) — moment uses <b>&mu;<sub>eff</sub></b>, not bulk &mu;<sub>r</sub>. The ideal/JEE curve is shown alongside so the gap is always visible.</div>
+
+  <div class="wrap">
+    <!-- ============ CONTROLS ============ -->
+    <div class="card">
+      <h2>Parameters</h2>
+
+      <label class="ctrl">
+        <div class="row"><span class="nm">Core material</span></div>
+        <select id="mat">
+          <option value="air">air (baseline)</option>
+          <option value="ferrite" selected>ferrite</option>
+          <option value="soft_iron">soft_iron</option>
+          <option value="permalloy">permalloy</option>
+          <option value="mu_metal">mu_metal</option>
+          <option value="supermalloy">supermalloy</option>
+        </select>
+      </label>
+
+      <label class="ctrl">
+        <div class="row"><span class="nm">Wire gauge</span></div>
+        <select id="awg"></select>
+      </label>
+
+      <div class="seg" id="modeSeg">
+        <button data-m="target" class="on">Solve N for target</button>
+        <button data-m="fixed">Fix N</button>
+      </div>
+
+      <label class="ctrl" id="mtBox">
+        <div class="row"><span class="nm">Target moment</span><span class="val"><span id="mtV">0.016</span> A·m²</span></div>
+        <input type="range" id="mt" min="0.004" max="0.10" step="0.001" value="0.016">
+      </label>
+
+      <label class="ctrl" id="nBox" style="display:none">
+        <div class="row"><span class="nm">Turns N</span><span class="val" id="nV">200</span></div>
+        <input type="range" id="nfix" min="10" max="3000" step="1" value="200">
+      </label>
+
+      <label class="ctrl">
+        <div class="row"><span class="nm">Core length</span><span class="val"><span id="lV">9.0</span> cm</span></div>
+        <input type="range" id="l" min="3" max="25" step="0.1" value="9">
+      </label>
+
+      <label class="ctrl">
+        <div class="row"><span class="nm">Core radius</span><span class="val"><span id="rV">2.0</span> mm</span></div>
+        <input type="range" id="r" min="1" max="6" step="0.1" value="2">
+      </label>
+
+      <label class="ctrl">
+        <div class="row"><span class="nm">Current</span><span class="val"><span id="iV">100</span> mA</span></div>
+        <input type="range" id="i" min="10" max="500" step="5" value="100">
+      </label>
+
+      <label class="ctrl">
+        <div class="row"><span class="nm">Env temperature</span><span class="val"><span id="teV">20</span> °C</span></div>
+        <input type="range" id="te" min="-30" max="80" step="1" value="20">
+      </label>
+
+      <div class="note">Limits: I≤500 mA · P≤1 W · T≤60 °C · mass≤50 g · OD≤20 mm · length≤25 cm · B<sub>core</sub>≤80% B<sub>sat</sub>.</div>
+    </div>
+
+    <!-- ============ CHARTS ============ -->
+    <div class="card">
+      <h2>Analysis</h2>
+      <div class="chtitle"><b>Turns vs core length</b> — real (demag) vs ideal (JEE), at current r &amp; I</div>
+      <div class="legend"><span><i style="background:var(--real)"></i>N real (μ_eff)</span><span><i style="background:var(--ideal)"></i>N ideal (bulk μ_r)</span></div>
+      <canvas id="cN" height="210"></canvas>
+
+      <div class="chtitle"><b>Apparent permeability vs aspect ratio l/r</b> — saturates at the 1/N<sub>d</sub> ceiling</div>
+      <div class="legend"><span><i style="background:var(--real)"></i>μ_eff (real)</span><span><i style="background:var(--ceil)"></i>1/N_d ceiling</span><span><i style="background:var(--ideal)"></i>bulk μ_r</span></div>
+      <canvas id="cMu" height="200"></canvas>
+
+      <div class="chtitle"><b>Steady-state coil temperature vs current</b> — radiative, vacuum</div>
+      <div class="legend"><span><i style="background:var(--accent2)"></i>T_coil</span><span><i style="background:var(--bad)"></i>60 °C limit</span></div>
+      <canvas id="cT" height="180"></canvas>
+    </div>
+
+    <!-- ============ TELEMETRY ============ -->
+    <div class="card tel">
+      <h2>Telemetry</h2>
+      <div id="tel"></div>
+    </div>
+  </div>
+
+<script>
+// ===================== CONSTANTS (mirror the .py) =====================
+const MU0=4e-7*Math.PI, SIGMA=5.67e-8, EMIS=0.85;
+const RHO20=1.68e-8, ALPHA=0.00393, TREF=20, CU_DENS=8960;
+const B_LEO=30e-6;
+const I_LIM=0.5, P_LIM=1.0, T_LIM=60, MASS_LIM=50, OD_LIM=0.020, LEN_LIM=0.25, SAT_M=0.80;
+
+const MAT={
+  air:        {mu:1,      dens:0,    bsat:null},
+  ferrite:    {mu:2000,   dens:4800, bsat:0.40},
+  soft_iron:  {mu:5000,   dens:7870, bsat:2.10},
+  permalloy:  {mu:25000,  dens:8700, bsat:0.75},
+  mu_metal:   {mu:50000,  dens:8740, bsat:0.75},
+  supermalloy:{mu:100000, dens:8800, bsat:0.80},
+};
+const AWG={AWG20:0.000406,AWG22:0.000322,AWG24:0.000255,AWG26:0.000202,AWG28:0.000161,
+  AWG30:0.000127,AWG32:0.000101,AWG34:0.000080,AWG36:0.000064,AWG38:0.000051,AWG40:0.000040};
+
+// ===================== PHYSICS (identical to .py) =====================
+const E=Math.E;
+function Nd(l,r){ const x=l/r; if(x<=E) return null;
+  return 4*(Math.log(x)-1)/(x*x-4*Math.log(x)); }
+function betaMoment(mu,nd){ if(nd===null) return mu; return 1+(mu-1)/(1+nd*(mu-1)); }
+function muFlux(mu,nd){ if(nd===null) return mu; return mu/(1+nd*(mu-1)); }
+function rhoAt(T){ return RHO20*(1+ALPHA*(T-TREF)); }
+
+function winding(N,l,r,rw){
+  const d=2*rw, tpl=Math.floor(l/d);
+  if(tpl<1) return null;
+  const layers=Math.ceil(N/tpl), thick=layers*d, rOuter=r+thick;
+  let len=0, rem=N;
+  for(let k=1;k<=layers;k++){ const rl=r+(k-0.5)*d, t=Math.min(rem,tpl);
+    len+=t*(2*Math.PI*rl); rem-=t; }
+  const fill=N/(tpl*layers);
+  return {tpl,layers,thick,rOuter,len,fill};
+}
+
+function thermal(I,len,area,rOuter,l,Tenv){
+  const A=2*Math.PI*rOuter*l+2*Math.PI*rOuter*rOuter;
+  let T=Tenv,R=rhoAt(T)*len/area;
+  for(let n=0;n<60;n++){
+    R=rhoAt(T)*len/area; const P=I*I*R;
+    const Tn=Math.pow(P/(EMIS*SIGMA*A)+Math.pow(Tenv+273.15,4),0.25)-273.15;
+    if(Math.abs(Tn-T)<1e-4){T=Tn;break;} T=Tn;
+  }
+  R=rhoAt(T)*len/area; return {T,R,P:I*I*R};
+}
+
+// full solve for one operating point
+function solve(cfg){
+  const m=MAT[cfg.mat], nd=Nd(cfg.l,cfg.r), area=Math.PI*cfg.r*cfg.r;
+  const beta=betaMoment(m.mu,nd), muf=muFlux(m.mu,nd);
+  const A_wire=Math.PI*cfg.rw*cfg.rw;
+
+  // turns
+  let N, N_ideal, moment;
+  if(cfg.mode==='target'){
+    N       = Math.max(1,Math.ceil(cfg.mt/(beta*cfg.I*area)));
+    N_ideal = Math.max(1,Math.ceil(cfg.mt/(m.mu*cfg.I*area)));
+    moment  = N*cfg.I*area*beta;
+  }else{
+    N=cfg.N; N_ideal=cfg.N; moment=N*cfg.I*area*beta;
+  }
+
+  const w=winding(N,cfg.l,cfg.r,cfg.rw);
+  if(!w) return null;
+  const th=thermal(cfg.I,w.len,A_wire,w.rOuter,cfg.l,cfg.Tenv);
+  const Vdrop=cfg.I*th.R;
+  const massCoil=w.len*A_wire*CU_DENS, massCore=area*cfg.l*m.dens, mass=massCoil+massCore;
+  const L=MU0*area*N*N/(cfg.l*(1/m.mu+(nd?nd:0)));
+  const tau=th.R>0? L/th.R : 0;
+  const Hdr=N*cfg.I/cfg.l, Bcore=MU0*muf*Hdr;
+
+  return {nd,beta,muf,mu:m.mu,bsat:m.bsat,area,N,N_ideal,moment,
+    torque:moment*B_LEO, ...w, T:th.T,R:th.R,P:th.P,Vdrop,
+    massCoil,massCore,mass,L,tau,Bcore,valid:(nd!==null||cfg.mat==='air')};
+}
+
+// ===================== UI PLUMBING =====================
+const $=id=>document.getElementById(id);
+const awgSel=$('awg');
+Object.keys(AWG).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;awgSel.appendChild(o);});
+awgSel.value='AWG30';
+let MODE='target';
+$('modeSeg').addEventListener('click',e=>{
+  if(!e.target.dataset.m) return; MODE=e.target.dataset.m;
+  [...$('modeSeg').children].forEach(b=>b.classList.toggle('on',b.dataset.m===MODE));
+  $('mtBox').style.display = MODE==='target'?'block':'none';
+  $('nBox').style.display  = MODE==='fixed'?'block':'none';
+  render();
+});
+
+function readCfg(){
+  return {mat:$('mat').value, rw:AWG[$('awg').value],
+    mode:MODE, mt:+$('mt').value, N:+$('nfix').value,
+    l:+$('l').value/100, r:+$('r').value/1000,
+    I:+$('i').value/1000, Tenv:+$('te').value};
+}
+// BUGFIX: <select> elements fire 'change', not always 'input' (browser-dependent).
+['mat','awg','mt','nfix','l','r','i','te'].forEach(id=>{
+  $(id).addEventListener('input',render);
+  $(id).addEventListener('change',render);
+});
+
+function fmt(x,d=2){ if(x===null||!isFinite(x)) return '—'; return x.toFixed(d); }
+
+// ===================== RENDER =====================
+function render(){
+  $('mtV').textContent=(+$('mt').value).toFixed(3);
+  $('nV').textContent=$('nfix').value;
+  $('lV').textContent=(+$('l').value).toFixed(1);
+  $('rV').textContent=(+$('r').value).toFixed(1);
+  $('iV').textContent=$('i').value;
+  $('teV').textContent=$('te').value;
+
+  const cfg=readCfg(), d=solve(cfg);
+  const tel=$('tel');
+  if(!d){ tel.innerHTML='<div class="note">Winding does not fit (wire too thick for this length). Adjust gauge or length.</div>'; drawAll(cfg,null); return; }
+
+  // BUGFIX: old check was fill<=1, which is true by construction
+  // (layers = ceil(N/turns_per_layer) can never overfill its own slots).
+  // The real buildability gate — same as the .py — is winding thickness
+  // not exceeding the core radius, plus a sane layer count.
+  const cI=cfg.I<=I_LIM, cP=d.P<=P_LIM, cT=d.T<=T_LIM, cM=d.mass*1000<=MASS_LIM,
+        cThk=d.thick<=cfg.r && d.layers<=15,
+        cOD=2*d.rOuter<=OD_LIM, cLen=cfg.l<=LEN_LIM,
+        cSat=(d.bsat===null)||(d.Bcore<=SAT_M*d.bsat), cVal=d.valid;
+  const ok=cI&&cP&&cT&&cM&&cThk&&cOD&&cLen&&cSat&&cVal;
+  const ratio=d.N_ideal>0? d.N/d.N_ideal : 1;
+  const satPct=d.bsat? Math.min(100,d.Bcore/d.bsat*100):0;
+
+  const cls=c=>c?'good':'bad', sym=c=>c?'[✓]':'[✗]';
+  tel.innerHTML=`
+  <div class="tgrp"><div class="ghd">Magnetic &amp; core</div>
+    <div class="t"><span class="k">l/r ratio</span><span class="v">${fmt(cfg.l/cfg.r,1)}</span></div>
+    <div class="t"><span class="k">Demag N_d</span><span class="v">${d.nd===null?'invalid':fmt(d.nd,5)}</span></div>
+    <div class="t"><span class="k">Boost μ_eff (real)</span><span class="v hi">${fmt(d.beta,1)}</span></div>
+    <div class="t"><span class="k">Bulk μ_r (ideal)</span><span class="v">${d.mu.toFixed(0)}</span></div>
+    <div class="t"><span class="k">Moment</span><span class="v hi">${fmt(d.moment,5)} A·m²</span></div>
+    <div class="t"><span class="k">Torque @ LEO</span><span class="v">${fmt(d.torque*1e6,3)} µN·m</span></div>
+    <div class="t"><span class="k">Inductance</span><span class="v">${fmt(d.L*1e3,3)} mH</span></div>
+    <div class="t"><span class="k">τ = L/R</span><span class="v">${fmt(d.tau*1e3,3)} ms</span></div>
+  </div>
+  <div class="tgrp"><div class="ghd">Turns — real vs ideal</div>
+    <div class="t"><span class="k">N real (needed)</span><span class="v hi">${d.N}</span></div>
+    <div class="t"><span class="k">N ideal (JEE claim)</span><span class="v" style="color:var(--ideal)">${d.N_ideal}</span></div>
+    <div class="t"><span class="k">under-count factor</span><span class="v ${ratio>1.5?'warn':'good'}">${fmt(ratio,1)}×</span></div>
+    <div class="t"><span class="k">layers × turns/layer</span><span class="v">${d.layers} × ${d.tpl}</span></div>
+    <div class="t"><span class="k">winding thickness</span><span class="v ${cls(cThk)}">${fmt(d.thick*1000,2)} mm (≤ r_core ${fmt(cfg.r*1000,1)})</span></div>
+  </div>
+  <div class="tgrp"><div class="ghd">Electrical &amp; thermal</div>
+    <div class="t"><span class="k">Resistance (hot)</span><span class="v">${fmt(d.R,3)} Ω</span></div>
+    <div class="t"><span class="k">Voltage drop</span><span class="v">${fmt(d.Vdrop,3)} V</span></div>
+    <div class="t"><span class="k">Current</span><span class="v ${cls(cI)}">${fmt(cfg.I*1000,1)} mA</span></div>
+    <div class="t"><span class="k">Power</span><span class="v ${cls(cP)}">${fmt(d.P*1000,2)} mW</span></div>
+    <div class="t"><span class="k">Coil temp (vac)</span><span class="v ${cls(cT)}">${fmt(d.T,1)} °C</span></div>
+  </div>
+  <div class="tgrp"><div class="ghd">Geometry &amp; mass</div>
+    <div class="t"><span class="k">Wire length</span><span class="v">${fmt(d.len,2)} m</span></div>
+    <div class="t"><span class="k">Coil outer Ø</span><span class="v ${cls(cOD)}">${fmt(2*d.rOuter*1000,2)} mm</span></div>
+    <div class="t"><span class="k">Core mass</span><span class="v">${fmt(d.massCore*1000,2)} g</span></div>
+    <div class="t"><span class="k">Coil mass</span><span class="v">${fmt(d.massCoil*1000,2)} g</span></div>
+    <div class="t"><span class="k">Total mass</span><span class="v ${cls(cM)}">${fmt(d.mass*1000,2)} g</span></div>
+  </div>
+  <div class="tgrp"><div class="ghd">Core saturation (model validity)</div>
+    <div class="t"><span class="k">B_core</span><span class="v ${cls(cSat)}">${fmt(d.Bcore*1e3,1)} mT</span></div>
+    <div class="t"><span class="k">B_sat</span><span class="v">${d.bsat===null?'n/a (air)':fmt(d.bsat,2)+' T'}</span></div>
+    <div class="bar"><span style="width:${satPct}%"></span></div>
+    <div class="barlab"><span>0</span><span>${d.bsat?'80% limit':''}</span><span>${d.bsat?d.bsat.toFixed(2)+' T':''}</span></div>
+  </div>
+  <div class="tgrp"><div class="ghd">Feasibility</div>
+    <div class="chk"><span class="k">${sym(cI)} Current ≤ 500 mA</span><span class="s v ${cls(cI)}">${cI?'PASS':'FAIL'}</span></div>
+    <div class="chk"><span class="k">${sym(cP)} Power ≤ 1 W</span><span class="s v ${cls(cP)}">${cP?'PASS':'FAIL'}</span></div>
+    <div class="chk"><span class="k">${sym(cT)} Temp ≤ 60 °C</span><span class="s v ${cls(cT)}">${cT?'PASS':'FAIL'}</span></div>
+    <div class="chk"><span class="k">${sym(cM)} Mass ≤ 50 g</span><span class="s v ${cls(cM)}">${cM?'PASS':'FAIL'}</span></div>
+    <div class="chk"><span class="k">${sym(cThk)} Winding fits (t ≤ r, ≤15 lay)</span><span class="s v ${cls(cThk)}">${cThk?'PASS':'FAIL'}</span></div>
+    <div class="chk"><span class="k">${sym(cOD)} Coil OD ≤ 20 mm</span><span class="s v ${cls(cOD)}">${cOD?'PASS':'FAIL'}</span></div>
+    <div class="chk"><span class="k">${sym(cLen)} Length ≤ 25 cm</span><span class="s v ${cls(cLen)}">${cLen?'PASS':'FAIL'}</span></div>
+    <div class="chk"><span class="k">${sym(cSat)} Not saturated</span><span class="s v ${cls(cSat)}">${cSat?'PASS':'FAIL'}</span></div>
+    <div class="chk"><span class="k">${sym(cVal)} Demag model valid (l/r&gt;e)</span><span class="s v ${cls(cVal)}">${cVal?'PASS':'FAIL'}</span></div>
+  </div>
+  <div class="verdict ${ok?'pass':'fail'}">${ok?'DESIGN FEASIBLE':'INFEASIBLE'}</div>`;
+
+  drawAll(cfg,d);
+}
+
+// ===================== CHARTS =====================
+function setup(cv){
+  // BUGFIX: previously read cv.height (already dpr-inflated by the last render)
+  // and multiplied by dpr again -> canvas grew on every slider event.
+  // Cache the design height once and pin the CSS height so layout never drifts.
+  if(!cv.dataset.baseH){ cv.dataset.baseH = cv.height; cv.style.height = cv.height+'px'; }
+  const dpr=window.devicePixelRatio||1, w=cv.clientWidth, h=+cv.dataset.baseH;
+  cv.width=w*dpr; cv.height=h*dpr; const c=cv.getContext('2d');
+  c.setTransform(dpr,0,0,dpr,0,0);           // reset scale instead of stacking
+  c.clearRect(0,0,w,h); return {c,w,h};
+}
+function axes(c,w,h,pad){ c.strokeStyle='#1c2a38'; c.lineWidth=1;
+  c.beginPath(); c.moveTo(pad.l,pad.t); c.lineTo(pad.l,h-pad.b); c.lineTo(w-pad.r,h-pad.b); c.stroke(); }
+function txt(c,s,x,y,col,al='left',fs=10){ c.fillStyle=col; c.font=fs+'px IBM Plex Mono';
+  c.textAlign=al; c.fillText(s,x,y); }
+
+function line(c,pts,col,lw=2,dash=[]){ c.strokeStyle=col; c.lineWidth=lw; c.setLineDash(dash);
+  c.beginPath(); pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1])); c.stroke(); c.setLineDash([]); }
+function dot(c,x,y,col){ c.fillStyle=col; c.beginPath(); c.arc(x,y,4,0,7); c.fill();
+  c.strokeStyle='#06222a'; c.lineWidth=2; c.stroke(); }
+
+function drawAll(cfg,d){ drawN(cfg,d); drawMu(cfg,d); drawT(cfg,d); }
+
+// chart 1: turns vs length (log y), real vs ideal
+function drawN(cfg,d){
+  const {c,w,h}=setup($('cN')), pad={l:52,r:14,t:12,b:26};
+  axes(c,w,h,pad);
+  // BUGFIX: in fixed-N mode the curve used a hardcoded 0.016 target while the
+  // dot sat at the fixed N -> dot floated off the curve. Use the moment the
+  // fixed-N coil actually achieves so the dot always lies on its own curve.
+  const m=MAT[cfg.mat], area=Math.PI*cfg.r*cfg.r,
+        mt=cfg.mode==='target'?cfg.mt:(d?d.moment:0.016);
+  const L0=0.03,L1=0.25, real=[],ideal=[];
+  for(let i=0;i<=120;i++){ const l=L0+(L1-L0)*i/120; const nd=Nd(l,cfg.r);
+    const b=betaMoment(m.mu,nd);
+    real.push([l,Math.max(1,mt/(b*cfg.I*area))]);
+    ideal.push([l,Math.max(1,mt/(m.mu*cfg.I*area))]); }
+  const all=real.concat(ideal).map(p=>p[1]);
+  let lo=Math.min(...all),hi=Math.max(...all); lo=Math.max(1,lo);
+  const lg=Math.log10, Y=v=>{ v=Math.max(lo,Math.min(hi,v));
+    return h-pad.b-(lg(v)-lg(lo))/(lg(hi)-lg(lo)+1e-9)*(h-pad.b-pad.t); };
+  const X=l=>pad.l+(l-L0)/(L1-L0)*(w-pad.l-pad.r);
+  for(let e=Math.floor(lg(lo));e<=Math.ceil(lg(hi));e++){ const yv=Math.pow(10,e);
+    if(yv<lo||yv>hi) continue; const y=Y(yv);
+    c.strokeStyle='#14202c'; c.beginPath(); c.moveTo(pad.l,y); c.lineTo(w-pad.r,y); c.stroke();
+    txt(c,yv>=1000?(yv/1000)+'k':yv,pad.l-6,y+3,'#4f6274','right'); }
+  line(c,ideal.map(p=>[X(p[0]),Y(p[1])]),'#f472b6',2);
+  line(c,real.map(p=>[X(p[0]),Y(p[1])]),'#22d3ee',2.4);
+  if(d){ dot(c,X(cfg.l),Y(d.N),'#22d3ee');
+    dot(c,X(cfg.l),Y(d.N_ideal),'#f472b6'); }
+  // BUGFIX: the '25' end tick was drawn mid-axis. Ticks at ends, label centered.
+  txt(c,'3',pad.l,h-10,'#4f6274');
+  txt(c,'25',w-pad.r,h-10,'#4f6274','right');
+  txt(c,'length (cm) →',(pad.l+w-pad.r)/2,h-10,'#4f6274','center');
+  txt(c,'N (log)',pad.l-44,pad.t+8,'#4f6274');
+}
+
+// chart 2: mu_eff vs l/r with 1/Nd ceiling
+function drawMu(cfg,d){
+  const {c,w,h}=setup($('cMu')), pad={l:52,r:14,t:12,b:26};
+  axes(c,w,h,pad);
+  const m=MAT[cfg.mat]; const X0=3,X1=120;
+  const eff=[],ceil=[];
+  for(let i=0;i<=120;i++){ const x=X0+(X1-X0)*i/120, l=x*cfg.r, nd=Nd(l,cfg.r);
+    eff.push([x,betaMoment(m.mu,nd)]); ceil.push([x,nd?1/nd:1]); }
+  // BUGFIX: linear y scaled to bulk mu_r (up to 100k) flattened the mu_eff
+  // curve (~10..900) into an invisible line for high-mu cores. Log scale.
+  const lg=Math.log10;
+  const hi=Math.max(m.mu,...ceil.map(p=>p[1]))*1.3, lo=1;
+  const Y=v=>{ v=Math.max(lo,Math.min(hi,v));
+    return h-pad.b-(lg(v)-lg(lo))/(lg(hi)-lg(lo)+1e-9)*(h-pad.b-pad.t); };
+  const X=x=>pad.l+(x-X0)/(X1-X0)*(w-pad.l-pad.r);
+  for(let e=0;e<=Math.ceil(lg(hi));e++){ const v=Math.pow(10,e);
+    if(v>hi) break; const y=Y(v);
+    c.strokeStyle='#14202c'; c.beginPath(); c.moveTo(pad.l,y); c.lineTo(w-pad.r,y); c.stroke();
+    txt(c,v>=1000?(v/1000)+'k':v,pad.l-6,y+3,'#4f6274','right'); }
+  // bulk mu_r reference (flat, ideal)
+  line(c,[[X(X0),Y(m.mu)],[X(X1),Y(m.mu)]],'#f472b6',1.5,[5,4]);
+  line(c,ceil.map(p=>[X(p[0]),Y(p[1])]),'#fbbf24',1.6,[4,3]);
+  line(c,eff.map(p=>[X(p[0]),Y(p[1])]),'#22d3ee',2.4);
+  if(d){ dot(c,X(cfg.l/cfg.r),Y(d.beta),'#22d3ee'); }
+  txt(c,'l/r →',w-pad.r,h-10,'#4f6274','right');
+  txt(c,'3',pad.l,h-10,'#4f6274');
+  txt(c,'μ',pad.l-44,pad.t+8,'#4f6274');
+}
+
+// chart 3: temp vs current
+function drawT(cfg,d){
+  const {c,w,h}=setup($('cT')), pad={l:46,r:14,t:12,b:26};
+  axes(c,w,h,pad);
+  if(!d){ return; }
+  const m=MAT[cfg.mat], area=Math.PI*cfg.r*cfg.r, A_wire=Math.PI*cfg.rw*cfg.rw;
+  const nd=Nd(cfg.l,cfg.r), beta=betaMoment(m.mu,nd);
+  // BUGFIX: ymax started at 66C; with Tenv up to 80C the y-range went
+  // negative and the chart drew inverted. Anchor ymax above Tenv.
+  const pts=[]; let ymax=Math.max(T_LIM*1.1, cfg.Tenv+15);
+  for(let i=0;i<=80;i++){ const I=0.01+(0.5-0.01)*i/80;
+    let N;
+    if(cfg.mode==='target') N=Math.max(1,Math.ceil(cfg.mt/(beta*I*area)));
+    else N=cfg.N;
+    const wd=winding(N,cfg.l,cfg.r,cfg.rw); if(!wd){pts.push(null);continue;}
+    const th=thermal(I,wd.len,A_wire,wd.rOuter,cfg.l,cfg.Tenv);
+    pts.push([I,th.T]); ymax=Math.max(ymax,th.T);
+  }
+  const X=I=>pad.l+(I-0.01)/(0.49)*(w-pad.l-pad.r);
+  const Y=T=>h-pad.b-(T-cfg.Tenv)/(ymax-cfg.Tenv+1e-9)*(h-pad.b-pad.t);
+  // limit line (only when inside the plotted range — BUGFIX: at Tenv>60C the
+  // dashed line used to render above the frame)
+  if(T_LIM>cfg.Tenv && T_LIM<ymax){
+    line(c,[[X(0.01),Y(T_LIM)],[X(0.5),Y(T_LIM)]],'#fb5f6d',1.4,[5,4]);
+    txt(c,'60°C',w-pad.r-2,Y(T_LIM)-4,'#fb5f6d','right');
+  }
+  const seg=pts.filter(p=>p).map(p=>[X(p[0]),Y(p[1])]);
+  line(c,seg,'#34d399',2.2);
+  dot(c,X(cfg.I),Y(d.T),'#34d399');
+  // BUGFIX: 'current (mA)' and '500' were both right-aligned at the same
+  // point and overlapped. Ticks at ends, axis label in the middle.
+  txt(c,'10',pad.l,h-10,'#4f6274');
+  txt(c,'500',w-pad.r,h-10,'#4f6274','right');
+  txt(c,'current (mA) →',(pad.l+w-pad.r)/2,h-10,'#4f6274','center');
+  txt(c,'T°C',pad.l-40,pad.t+8,'#4f6274');
+}
+
+window.addEventListener('resize',render);
+render();
+</script>
+</body>
+</html>
